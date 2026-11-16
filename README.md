@@ -19,6 +19,22 @@ A full-stack performance, recovery, strength, and nutrition dashboard built on *
 
 ---
 
+## Screenshots
+
+### Today — Daily Readiness, FORGE Score & Bio-Telemetry
+![Today](docs/screenshots/today.png)
+
+### Strength Lab — Anatomical Muscle Map & Weekly Volume
+![Strength Lab](docs/screenshots/strength.png)
+
+### Engine — Cardio Workload & Interactive GPS Route Map
+![Engine](docs/screenshots/engine.png)
+
+### Tips & Reports — Garmin Coach Signals, Fitness Age, Sleep & Race Predictor
+![Tips & Reports](docs/screenshots/tips.png)
+
+---
+
 ## Project Structure
 
 ```text
