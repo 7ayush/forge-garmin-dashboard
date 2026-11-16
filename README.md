@@ -38,6 +38,7 @@ dashboard/
 │       ├── components/     # AppShell, RouteMap, ActivityDetailModal, QuickLogModal, etc.
 │       ├── pages/          # Today, Strength, Engine, Recovery, Body, Fuel, Progress, Tips, Settings
 │       └── types/forge.ts
+├── mcp/                    # Garmin Connect MCP server (garmin-mcp)
 └── tests/
     └── test_forge_backend.py
 ```
