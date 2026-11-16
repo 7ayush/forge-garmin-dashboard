@@ -56,18 +56,18 @@ def get_garmin_client(force_reinit: bool = False, token_dir: Optional[Path] = No
         if key in _CLIENTS and not force_reinit:
             return _CLIENTS[key]
         client = Garmin()
-        if t_dir.exists() and any(t_dir.glob("*.json")):
+        if t_dir.exists() and any(p.name != "account_meta.json" for p in t_dir.glob("*.json")):
             client.login(str(t_dir))
             _CLIENTS[key] = client
             return client
         email, password = load_credentials()
-        if email and password and acc.id == "ayush":
+        if email and password:
             fallback = init_api(email, password)
             if fallback is not None:
                 _CLIENTS[key] = fallback
                 return fallback
         raise RuntimeError(
-            f"Garmin account '{acc.email}' is not authenticated yet. Please sign in via the account switcher."
+            "Garmin account is not authenticated yet. Please sign in from the sidebar."
         )
 
 

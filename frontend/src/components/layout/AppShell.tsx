@@ -56,9 +56,9 @@ export function AppShell({
   onAccountChange?: () => void;
   children: React.ReactNode;
 }) {
-  const [accounts, setAccounts] = useState<AccountInfo[]>([]);
-  const [activeAccount, setActiveAccount] = useState<string>("ayush");
-  const [loginTarget, setLoginTarget] = useState<AccountInfo | null>(null);
+  const [account, setAccount] = useState<AccountInfo | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginBusy, setLoginBusy] = useState(false);
@@ -67,42 +67,38 @@ export function AppShell({
     forgeApi
       .getAccounts()
       .then((res) => {
-        setAccounts(res.accounts);
-        setActiveAccount(res.activeAccount);
+        const first = res.accounts[0] ?? null;
+        setAccount(first);
+        if (first?.email) setLoginEmail(first.email);
       })
       .catch(() => {});
   }, []);
 
-  const handleSelectAccount = async (acc: AccountInfo) => {
-    try {
-      const res = await forgeApi.selectAccount(acc.id);
-      setAccounts(res.accounts);
-      setActiveAccount(res.activeAccount);
-      onAccountChange?.();
-      if (!acc.authenticated) {
-        setLoginTarget(acc);
-        setLoginError(null);
-      }
-    } catch {
-      // ignore
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginTarget || !loginPassword) return;
+    if (!loginEmail || !loginPassword) return;
     setLoginBusy(true);
     setLoginError(null);
     try {
-      const res = await forgeApi.loginAccount(loginTarget.id, loginPassword);
-      setAccounts(res.accounts);
-      setLoginTarget(null);
+      const res = await forgeApi.loginAccount(loginEmail, loginPassword);
+      setAccount(res.accounts[0] ?? null);
+      setLoginOpen(false);
       setLoginPassword("");
       onAccountChange?.();
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoginBusy(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const res = await forgeApi.logoutAccount();
+      setAccount(res.accounts[0] ?? null);
+      onAccountChange?.();
+    } catch {
+      // ignore
     }
   };
   const lastSynced = syncState?.running
@@ -131,39 +127,46 @@ export function AppShell({
           </div>
         </div>
 
-        {accounts.length > 0 && (
-          <div className="mb-4 rounded-xl border border-slate-800/80 bg-slate-950/60 p-2">
-            <div className="mb-1.5 flex items-center gap-1.5 px-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-              <UserCheck className="h-3 w-3 text-emerald-400" />
-              Account
+        {account && (
+          <div className="mb-4 rounded-xl border border-slate-800/80 bg-slate-950/60 p-2.5">
+            <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+              <span className="flex items-center gap-1.5">
+                <UserCheck className="h-3 w-3 text-emerald-400" />
+                Garmin Account
+              </span>
+              <span
+                title={account.authenticated ? "Connected" : "Sign in required"}
+                className={`h-2 w-2 rounded-full ${
+                  account.authenticated ? "bg-emerald-400" : "bg-amber-400"
+                }`}
+              />
             </div>
-            <div className="space-y-1">
-              {accounts.map((acc) => {
-                const isActive = acc.id === activeAccount;
-                return (
-                  <button
-                    key={acc.id}
-                    type="button"
-                    onClick={() => void handleSelectAccount(acc)}
-                    className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs transition ${
-                      isActive
-                        ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                        : "text-slate-300 hover:bg-slate-900"
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{acc.label}</div>
-                      <div className="truncate text-[10px] text-slate-400">{acc.email}</div>
-                    </div>
-                    <span
-                      title={acc.authenticated ? "Authenticated" : "Sign in required"}
-                      className={`ml-2 h-2 w-2 shrink-0 rounded-full ${
-                        acc.authenticated ? "bg-emerald-400" : "bg-amber-400"
-                      }`}
-                    />
-                  </button>
-                );
-              })}
+            <div className="truncate text-xs font-semibold text-slate-200">
+              {athleteName || account.label || "Garmin Connect"}
+            </div>
+            {account.email && (
+              <div className="truncate text-[10px] text-slate-400">{account.email}</div>
+            )}
+            <div className="mt-2 flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginError(null);
+                  setLoginOpen(true);
+                }}
+                className="flex-1 rounded-lg border border-slate-700/80 bg-slate-900 px-2 py-1 text-[10px] font-semibold text-slate-200 transition hover:border-emerald-500/40 hover:text-emerald-300"
+              >
+                {account.authenticated ? "Switch" : "Sign In"}
+              </button>
+              {account.authenticated && (
+                <button
+                  type="button"
+                  onClick={() => void handleLogout()}
+                  className="rounded-lg border border-slate-800 px-2 py-1 text-[10px] text-slate-400 transition hover:border-rose-500/40 hover:text-rose-300"
+                >
+                  Sign Out
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -279,24 +282,34 @@ export function AppShell({
           );
         })}
       </nav>
-      {loginTarget && (
+      {loginOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <form
             onSubmit={handleLogin}
             className="w-full max-w-sm rounded-2xl border border-slate-800 bg-[#0b1018] p-5 shadow-2xl"
           >
             <h3 className="text-sm font-bold text-slate-100">
-              Sign in to Garmin ({loginTarget.label})
+              Sign in to Garmin Connect
             </h3>
-            <p className="mt-1 text-xs text-slate-400">{loginTarget.email}</p>
+            <p className="mt-1 text-xs text-slate-400">
+              Your OAuth tokens are stored locally on your machine.
+            </p>
+            <input
+              type="email"
+              required
+              autoFocus
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              placeholder="Garmin Connect email"
+              className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-500"
+            />
             <input
               type="password"
               required
-              autoFocus
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
               placeholder="Garmin Connect password"
-              className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-500"
+              className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-100 outline-none focus:border-emerald-500"
             />
             {loginError && (
               <p className="mt-2 text-xs text-rose-400">{loginError}</p>
@@ -304,7 +317,7 @@ export function AppShell({
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setLoginTarget(null)}
+                onClick={() => setLoginOpen(false)}
                 className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
               >
                 Cancel

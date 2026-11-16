@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dashboard.api.accounts import ACCOUNTS, get_active_account, list_accounts, set_active_account
+from dashboard.api.accounts import get_active_account, list_accounts, save_account_meta, set_active_account
 
 import asyncio
 import json
@@ -333,21 +333,24 @@ def build_api_routes(db_path: Optional[Path] = None) -> List[Any]:
 
     async def api_accounts_login(request: Request) -> Response:
         body = await _read_json(request)
-        account_id = str(body.get("accountId") or get_active_account().id).strip()
+        acc = get_active_account()
+        email = str(body.get("email") or acc.email or "").strip()
         password = str(body.get("password") or "")
-        acc = ACCOUNTS.get(account_id) or get_active_account()
-        if not password:
-            return _err(400, "Password is required to sign in to Garmin Connect.")
+        if not email or not password:
+            return _err(400, "Both Garmin email and password are required to sign in.")
 
         def _login():
             from garminconnect import Garmin
+            from dashboard.api.garmin_sync import _CLIENTS
             acc.token_dir.mkdir(parents=True, exist_ok=True)
-            client = Garmin(acc.email, password)
+            client = Garmin(email, password)
             client.login()
             if hasattr(client, "garth"):
                 client.garth.dump(str(acc.token_dir))
             else:
                 client.client.dump(str(acc.token_dir))
+            save_account_meta(acc.token_dir, email)
+            _CLIENTS.pop(str(acc.token_dir), None)
             with get_conn(acc.db_path):
                 pass
 
@@ -355,7 +358,19 @@ def build_api_routes(db_path: Optional[Path] = None) -> List[Any]:
             await asyncio.to_thread(_login)
             return JSONResponse({"ok": True, "accounts": list_accounts()})
         except Exception as exc:
-            return _err(401, f"Garmin login failed for {acc.email}: {exc}")
+            return _err(401, f"Garmin login failed for {email}: {exc}")
+
+    async def api_accounts_logout(request: Request) -> Response:
+        from dashboard.api.garmin_sync import _CLIENTS
+        acc = get_active_account()
+        if acc.token_dir.exists():
+            for p in acc.token_dir.glob("*.json"):
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
+        _CLIENTS.pop(str(acc.token_dir), None)
+        return JSONResponse({"ok": True, "accounts": list_accounts()})
 
     async def api_today(request: Request) -> Response:
         def _work():
@@ -1250,6 +1265,7 @@ def build_api_routes(db_path: Optional[Path] = None) -> List[Any]:
         Route("/api/accounts", api_accounts),
         Route("/api/accounts/select", api_accounts_select, methods=["POST"]),
         Route("/api/accounts/login", api_accounts_login, methods=["POST"]),
+        Route("/api/accounts/logout", api_accounts_logout, methods=["POST"]),
         Route("/api/today", api_today),
         Route("/api/strength", api_strength),
         Route("/api/strength/sets/{activity_id}/local", api_strength_patch_local, methods=["PATCH"]),

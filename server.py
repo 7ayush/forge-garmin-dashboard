@@ -52,19 +52,20 @@ def _start_sync_loop(stop_event: threading.Event, db_path: Path) -> threading.Th
     return t
 
 
-def create_app(db_path: Path = DEFAULT_DB_PATH, start_scheduler: bool = True) -> Starlette:
+def create_app(db_path: Optional[Path] = None, start_scheduler: bool = True) -> Starlette:
     """Create the FORGE Starlette application."""
-    ensure_schema(db_path)
+    resolved_db = db_path or DEFAULT_DB_PATH
+    ensure_schema(resolved_db)
     stop_event = threading.Event()
 
     @asynccontextmanager
     async def lifespan(_app: Starlette):
         if start_scheduler:
-            _start_sync_loop(stop_event, db_path)
+            _start_sync_loop(stop_event, resolved_db)
         yield
         stop_event.set()
 
-    app = Starlette(routes=build_api_routes(db_path=None), lifespan=lifespan)
+    app = Starlette(routes=build_api_routes(db_path=db_path), lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://127.0.0.1:8765"],

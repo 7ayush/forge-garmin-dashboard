@@ -15,7 +15,7 @@ A full-stack performance, recovery, strength, and nutrition dashboard built on *
 - **Progress (`/progress`)**: Multi-week/month trend charts and volume progression.
 - **Tips & Reports (`/tips`)**: Actionable daily coach tips from Garmin telemetry, Fitness Age report, Endurance & Hill scores, Lactate Threshold, Sleep Coach & Daily Health summaries, Race Predictions (5K/10K/HM/Marathon), Personal Records, and Earned Badges.
 - **Interactive GPS Maps (`RouteMap`)**: Leaflet maps with **Dark**, **Street**, **Satellite**, and **Topo** views plus **Fullscreen** mode (`Esc` to exit) and Start/Finish markers.
-- **Multi-Account Support**: Switch between accounts in the left sidebar or via environment variables, with isolated SQLite databases and Garmin OAuth token directories per account.
+- **Garmin Account Sign-In**: Connect and manage your own Garmin Connect account directly from the sidebar UI (OAuth tokens are stored locally in `~/.garminconnect`).
 
 ---
 
@@ -75,22 +75,12 @@ Open **http://127.0.0.1:8765** in your browser.
 
 ---
 
-## Multi-Account Configuration
+## Garmin Authentication
 
-Each account stores its Garmin OAuth tokens and SQLite database separately:
+Sign in directly from the **Garmin Account** card in the left sidebar using your Garmin Connect email and password.
 
-| Account ID | Default Token Dir | SQLite Database |
-| :--- | :--- | :--- |
-| `ayush` | `~/.garminconnect` | `data/forge.db` |
-| `praveen` | `~/.garminconnect_praveen` | `data/forge_praveen.db` |
-
-### Environment Variables (Optional)
-
-- `GARMIN_ACTIVE_ACCOUNT` (`ayush` or `praveen`) — initial active account on startup
-- `GARMIN_ACCOUNT_1_EMAIL`, `GARMIN_ACCOUNT_1_LABEL`, `GARMIN_ACCOUNT_1_TOKEN_DIR`
-- `GARMIN_ACCOUNT_2_EMAIL`, `GARMIN_ACCOUNT_2_LABEL`, `GARMIN_ACCOUNT_2_TOKEN_DIR`
-
-You can also switch accounts and sign in directly from the **Account** switcher in the sidebar UI.
+- **Token Directory:** `~/.garminconnect` (override with `GARMIN_TOKEN_DIR`)
+- **Local Database:** `data/forge.db`
 
 ---
 

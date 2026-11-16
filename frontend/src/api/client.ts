@@ -81,10 +81,14 @@ export const forgeApi = {
       method: "POST",
       body: JSON.stringify({ accountId }),
     }),
-  loginAccount: (accountId: string, password: string) =>
+  loginAccount: (email: string, password: string) =>
     requestJson<{ ok: boolean; accounts: AccountsPayload["accounts"] }>("/api/accounts/login", {
       method: "POST",
-      body: JSON.stringify({ accountId, password }),
+      body: JSON.stringify({ email, password }),
+    }),
+  logoutAccount: () =>
+    requestJson<{ ok: boolean; accounts: AccountsPayload["accounts"] }>("/api/accounts/logout", {
+      method: "POST",
     }),
   getEngine: (days = 30) => requestJson<EnginePayload>(`/api/engine?days=${days}`),
   getTips: (refresh = false) => requestJson<TipsPayload>(`/api/tips${refresh ? "?refresh=1" : ""}`),
